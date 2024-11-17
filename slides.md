@@ -1,8 +1,8 @@
 ---
 author: Yann Orlarey, Stéphane Letz, Romain Michon
-title: Widget Modulation in Faust
-subtitle: A Novel Extension for Audio Circuit Design
-institute: Emeraude (INRIA/INSA/GRAME)
+title: Widget Modulation
+subtitle: A Novel Extension for Modular Design in Faust
+institute: EMERAUDE (INRIA/INSA/GRAME)
 topic: "Faust"
 theme: "metropolis"
 colortheme: "crane"
@@ -16,18 +16,27 @@ section-titles: false
 toc: false
 
 ---
-# Motivation
+# Introduction
 
-## Question:
-Faust is a highly modular programming language. It is easy to reuse and combine existing modules. But how can we
-control the parameters of a module if it already has its own user interface?
+![two VCOs](images/two-vco.png){height=50%}
 
-## Answer:
-This was previously impossible (except by external control via
-MIDI, OSC or HTTP) without manually editing the component
-code. 
+## Example
 
-# Overview
+```C
+mo = library("modular.lib");
+process = hgroup("demo", mo.vco(1), mo.vco(2));
+```
+
+## Question?
+
+Can I use these VCOs for frequency modulation?
+
+
+# The answer ...
+
+Not without editing the code (or using Widget Modulation)
+
+## Widget Modulation
 
 - New extension to Faust programming language
 - Inspired by modular synthesizers
@@ -35,166 +44,123 @@ code.
 - Allows parameter modulation without code modification
 - Enhances code reuse and customization
 
----
+## Example
 
-# Historical Context
-
-- Mid-20th century: Voltage control in analog synthesis
-- Key innovators:
-  - Hugh Le Caine (VCO concept)
-  - Robert Moog (1V/oct standard)
-  - Don Buchla
-- Enabled recursive control: signals controlling other signals
-- Foundation for modern modular synthesis
-
----
-
-# Traditional Approach in Faust
-
-Basic oscillator example:
-```faust
-myosc = vslider("freq[style:knob][scale:log]", 
-        440, 20, 20000, 0.1) 
-      : os.osc;
+```C
+mo = library("modular.lib");
+process = hgroup("demo", mo.vco(1)*200  
+                       : ["freq":+ -> mo.vco(2)]) 
+                      <: _,_;
 ```
 
-Adding modulation required code modification:
+# Reshaping the UI of `dm.freeverb_demo` (1/4).
+
+![Freeverb, full UI](diagram/freeverb.png){ height=50%}
+
+## Example 1: full UI
+
 ```faust
-myosc = +(vslider("freq[style:knob][scale:log]", 
-        440, 20, 20000, 0.1)) 
-      : os.osc;
+import("stdfaust.lib");
+process = ba.pulsen(1, 10000) 
+        : pm.djembe(60, 0.3, 0.4, 1)  
+       <: dm.freeverb_demo;
 ```
 
----
+# Reshaping the UI of `dm.freeverb_demo` (2/4).
+
+![Freeverb, Wet slider removed](diagram/freeverb-nowet.png){ height=50%}
+
+## Example 2: full UI
+
+```faust
+import("stdfaust.lib");
+process = ba.pulsen(1, 10000) 
+        : pm.djembe(60, 0.3, 0.4, 1)  
+       <: ["Wet":0.2 -> dm.freeverb_demo];
+```
+
+# Reshaping the UI of `dm.freeverb_demo` (3/4).
+
+![Freeverb, RoomSize also removed](diagram/freeverb-noroomsize.png){ height=50%}
+
+## Example 2: full UI
+
+```faust
+import("stdfaust.lib");
+process = ba.pulsen(1, 10000) 
+        : pm.djembe(60, 0.3, 0.4, 1)  
+       <: ["Wet":0.2, "RoomSize":0.9 -> dm.freeverb_demo];
+```
+
+# Reshaping the UI of `dm.freeverb_demo` (4/4).
+
+![Freeverb, Stereo Spread replaced](diagram/freeverb-stereospread.png){ height=30%}
+
+## Example 2: full UI
+
+```faust
+import("stdfaust.lib");
+st = vslider("stereo", 0.5, 0, 1, 0.01);
+process = ba.pulsen(1, 10000) 
+        : pm.djembe(60, 0.3, 0.4, 1)  
+       <: ["Wet":0.2, "RoomSize":0.9, 
+	       "Stereo Spread":st -> dm.freeverb_demo];
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Widget Modulation: Basic Syntax
 
-```faust
-["WidgetName" -> Circuit]
-```
-
-Example with Freeverb:
-```faust
-["Wet" -> dm.freeverb_demo]
-```
-
-Creates additional input for modulation signal
-Default operation: multiplication
+## Syntax diagram:
+![Widget Modulation](diagram/WidgetModulationExpression.png)
 
 ---
 
-# Modulation Types
+# Widget Modulation: Target Syntax
 
-Three possible configurations:
+## Syntax diagram:
 
-1. Binary Circuit (2→1)
-   - Creates additional input
-   - Example: `"Wet":+`
+![Target](diagram/Target.png)
 
-2. Unary Circuit (1→1)
-   - No additional input
-   - Example: `"Wet":*(lfo(10, 0.5))`
+# Widget Modulation: Widget Path
 
-3. Constant Circuit (0→1)
-   - Replaces widget
-   - Example: `"Wet":0.75`
+## Syntax diagram:
 
----
+![Widget Path](diagram/WidgetPath.png)
 
-# Multiple Targets
+# Modulation Circuit
 
-Can modulate multiple widgets:
-```faust
-["Wet", "Damp", "RoomSize" -> dm.freeverb_demo]
-```
+## Binary Circuit (2→1)
 
-Equivalent to:
-```faust
-["Wet" -> ["Damp" -> ["RoomSize" -> dm.freeverb_demo]]]
-```
+- Creates an additional input
+- Example: `"Wet":+`
 
----
+## Unary Circuit (1→1)
 
-# Widget Path Specification
+- Transforms the widget value, no additional input
+- Example: `"Wet":*(lfo(10, 0.5))`
 
-- Format: `group-type:group-label/widget-label`
-- Group types: `h:` (horizontal), `v:` (vertical), `t:` (tab)
-- Example: `"v:chan 1/gain"`
-- Helps disambiguate widgets with same name
+## Constant Circuit (0→1)
+
+- Replaces the widget
+- Example: `"Wet":0.75`
+- Example: `"Wet":hslider("foo", 0.5, 0, 1, 0.1)`
 
 ---
 
-# Advanced Modulation Circuits
-
-Common modulation functions:
-
-```faust
-// For positive modulation (0 to +1)
-addp(v1,v2,w,m) = max(lo, min(hi, w + v))
-  with {
-    lo = lowest(w);
-    hi = highest(w);
-    v = v1+m*(v2-v1);
-  };
-
-// For audio signals (-1 to +1)
-add(v1,v2,w,m) = addp(v1,v2,w,(m+1)/2);
-```
-
----
-
-# Practical Example: FM Synthesis
-
-Basic FM implementation:
-```faust
-process = osc(1) : ["freq":+ -> osc(2)];
-```
-
-Enhanced version with amplitude control:
-```faust
-process = osc(0)+1 : 
-  ["gain" -> osc(1)*500] : 
-  ["freq":+ -> osc(2)];
-```
-
----
-
-# Multiple Modulations
-
-Same widget can have multiple modulations:
-```faust
-["freq":md.add(-600,600), 
- "freq":md.mul(0.1,10) -> osc(1)]
-```
-
-- First modulation: frequency addition
-- Second modulation: frequency multiplication
-
----
-
-# Complex Example
-
-Combined modulations with feedback:
-```faust
-process = osc(0) : 
-  ["gain":md.add(0,0.5) -> 
-    (_ ,osc(1): 
-      ["freq":md.add(-600,600), 
-       "freq":md.mul(0.1,10) -> 
-         osc(2)])~@(200) ]<: _,@(5000);
-```
-
----
-
-# Best Practices
-
-- Use clear widget naming conventions
-- Consider range limitations when designing modulations
-- Leverage group hierarchies for precise targeting
-- Document modulation expectations in library code
-- Test edge cases with extreme modulation values
-
----
 
 # Benefits & Impact
 
@@ -204,14 +170,4 @@ process = osc(0) :
 - Matches modular synthesis workflow
 - No performance overhead
 - Maintains Faust's functional approach
-
----
-
-# Future Directions
-
-- Development of modulation circuit libraries
-- Enhanced UI feedback for modulated parameters
-- Integration with other Faust features
-- Community-driven modulation patterns
-- Potential standardization of common modulations
 
