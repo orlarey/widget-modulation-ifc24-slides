@@ -107,21 +107,6 @@ process = ba.pulsen(1, 10000)
 	       "Stereo Spread":st -> dm.freeverb_demo];
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Widget Modulation: Basic Syntax
 
 ## Syntax diagram:
@@ -159,15 +144,35 @@ process = ba.pulsen(1, 10000)
 - Example: `"Wet":0.75`
 - Example: `"Wet":hslider("foo", 0.5, 0, 1, 0.1)`
 
----
+# Example of (2→1) modulation circuit
 
+## Description
 
-# Benefits & Impact
+- We assume the modulation signal $m$ is an audio signal.
+- When $m$ is 0, the current slider value is used.
+- When $m$ is +1, the maximum value of the slider is used.
+- When $m$ is -1, the minimum value of the slider is used.
 
-- Enhances code reusability
-- Enables post-development customization
-- Facilitates library development
-- Matches modular synthesis workflow
-- No performance overhead
-- Maintains Faust's functional approach
+## Implementation
 
+```C
+mod(s, m) = s + (h - s) * max(0, m) + (s - l) * min(0, m)
+    with {
+        l = lowest(s);
+        h = highest(s);
+    };
+```
+
+# Conclusion
+
+## Benefits
+
+- Widget Modulation Enhances code reusability.
+- It enables post-development customization.
+- It doesn't require source access.
+- It introduces no performance overhead.
+
+## Impact
+
+- Enables the creation of new, rich UI libraries.
+- Lays the groundwork for a potential _modular synthesizer_ library.
