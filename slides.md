@@ -10,7 +10,7 @@ fonttheme: "professionalfonts"
 fontsize: 10pt
 urlcolor: red
 linkstyle: bold
-date: 15 mars 2035
+date: IFC 2024
 lang: en-US
 section-titles: false
 toc: false
